@@ -1,0 +1,117 @@
+datasets:
+  - mode: train
+    log_name: dummy
+    class_name: LoadNpyDataset
+    args:
+      npy_path_x: /Users/james.chao/Desktop/codeMore/mygithub/Deep-Learning-Playground/_examples/boston_housing/dataset_preprocessed/train_x.npy
+      npy_path_y: /Users/james.chao/Desktop/codeMore/mygithub/Deep-Learning-Playground/_examples/boston_housing/dataset_preprocessed/train_y.npy
+  - mode: valid
+    log_name: dummy
+    class_name: LoadNpyDataset
+    args:
+      npy_path_x: /Users/james.chao/Desktop/codeMore/mygithub/Deep-Learning-Playground/_examples/boston_housing/dataset_preprocessed/valid_x.npy
+      npy_path_y: /Users/james.chao/Desktop/codeMore/mygithub/Deep-Learning-Playground/_examples/boston_housing/dataset_preprocessed/valid_y.npy
+  - mode: infer
+    log_name: dummy
+    class_name: LoadNpyDataset
+    args:
+      npy_path_x: /Users/james.chao/Desktop/codeMore/mygithub/Deep-Learning-Playground/_examples/boston_housing/dataset_preprocessed/valid_x.npy
+
+
+dataloaders:
+  - mode: train
+    class_name: DefaultLoader
+    args:
+      batch_size: 32
+      shuffle: False
+  - mode: valid
+    class_name: DefaultLoader
+    args:
+      batch_size: 32
+      shuffle: False
+  - mode: infer
+    class_name: DefaultLoader
+    args:
+      batch_size: 32
+      shuffle: False
+
+
+model:
+  class_name: SimpleDNN
+  args:
+    num_input_features: 12
+    num_output_features: 1
+
+
+pretrain_loader:
+  func_name: default_pretrain_loader
+  args:
+    path: ""
+
+
+loss:
+  class_name: torch.nn.MSELoss
+  args: {}
+
+
+optimizer:
+  class_name: torch.optim.Adam
+  args:
+    lr: 0.001
+
+
+lr_scheduler:
+  class_name: torch.optim.lr_scheduler.StepLR
+  args:
+    step_size: 30
+    gamma: 0.8
+
+
+output_collectors:
+  - mode: train
+    class_name: DefaultOutputCollector
+    args: {}
+  - mode: valid
+    class_name: DefaultOutputCollector
+    args: {}
+  - mode: infer
+    class_name: DefaultOutputCollector
+    args: {}
+
+
+histories:
+  - mode: train
+    class_name: DefaultHistory
+    args: &history_args
+      metrics:
+        - loss
+        - &r2_score r2_score
+      save_dir: &save_dir /Users/james.chao/Desktop/codeMore/mygithub/Deep-Learning-Playground/_examples/boston_housing/output
+  - mode: valid
+    class_name: DefaultHistory
+    args: *history_args
+
+
+metrics_pipeline:
+  class_name: RegressionMetricsPipeline
+  args:
+    func_dicts:
+      - log_name: *r2_score
+        func_name: r2_score
+        func_args: {}
+
+
+monitors:
+  - mode: valid
+    log_name: *r2_score
+    target: max
+
+
+hyperparameters:
+  device: auto
+  epochs: 100
+  save_dir: *save_dir
+  save_ckpts_per_epochs: 30
+  train_func_name: train
+  valid_func_name: valid
+  infer_func_name: infer

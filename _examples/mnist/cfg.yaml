@@ -1,0 +1,199 @@
+datasets:
+  - mode: train
+    log_name: dummy
+    class_name: LoadNpyDataset
+    args:
+      npy_path_x: /Users/james.chao/Desktop/codeMore/mygithub/Deep-Learning-Playground/_examples/mnist/dataset_preprocessed/train_x.npy
+      npy_path_y: /Users/james.chao/Desktop/codeMore/mygithub/Deep-Learning-Playground/_examples/mnist/dataset_preprocessed/train_y.npy
+      dtype_y: int64
+      transform: SimpleTransform
+      transform_args:
+        cfgs:
+          - name: ToTensor
+            args: {}
+          - name: ColorJitter
+            args:
+              brightness: 0.5
+              contrast: 0.5
+  - mode: valid
+    log_name: dummy
+    class_name: LoadNpyDataset
+    args:
+      npy_path_x: /Users/james.chao/Desktop/codeMore/mygithub/Deep-Learning-Playground/_examples/mnist/dataset_preprocessed/valid_x.npy
+      npy_path_y: /Users/james.chao/Desktop/codeMore/mygithub/Deep-Learning-Playground/_examples/mnist/dataset_preprocessed/valid_y.npy
+      dtype_y: int64
+      transform: SimpleTransform
+      transform_args:
+        cfgs:
+          - name: ToTensor
+            args: {}
+  - mode: infer
+    log_name: dummy
+    class_name: LoadNpyDataset
+    args:
+      npy_path_x: /Users/james.chao/Desktop/codeMore/mygithub/Deep-Learning-Playground/_examples/mnist/dataset_preprocessed/valid_x.npy
+      transform: SimpleTransform
+      transform_args:
+        cfgs:
+          - name: ToTensor
+            args: {}
+
+dataloaders:
+  - mode: train
+    class_name: DefaultLoader
+    args:
+      batch_size: 32
+      shuffle: False
+  - mode: valid
+    class_name: DefaultLoader
+    args:
+      batch_size: 32
+      shuffle: False
+  - mode: infer
+    class_name: DefaultLoader
+    args:
+      batch_size: 32
+      shuffle: False
+
+
+model:
+  class_name: SimpleCNN
+  args:
+    input_c: 1
+    input_h: 28
+    input_w: 28
+    num_output_features: 10
+    hidden: 64
+
+
+pretrain_loader:
+  func_name: default_pretrain_loader
+  args:
+    path: ""
+
+
+loss:
+  class_name: CrossEntropyLoss
+  args: {}
+
+
+optimizer:
+  class_name: torch.optim.Adam
+  args:
+    lr: 0.001
+
+
+lr_scheduler:
+  class_name: torch.optim.lr_scheduler.StepLR
+  args:
+    step_size: 30
+    gamma: 0.8
+
+
+output_collectors:
+  - mode: train
+    class_name: DefaultOutputCollector
+    args: {}
+  - mode: valid
+    class_name: DefaultOutputCollector
+    args: {}
+  - mode: infer
+    class_name: DefaultOutputCollector
+    args: {}
+
+
+histories:
+  - mode: train
+    class_name: DefaultHistory
+    args: &history_args
+      metrics:
+        - loss
+        - &pr_curves pr_curves
+        - &refine_pr_curves refine_pr_curves
+        - &ap_list ap_list
+        - &map map
+        - &wmap wmap
+        - &best_threshold best_threshold
+        - &confusion confusion
+        - &confusion_with_img_indices confusion_with_img_indices
+        - &confusion_col_norm confusion_col_norm
+        - &confusion_row_norm confusion_row_norm
+      save_dir: &save_dir /Users/james.chao/Desktop/codeMore/mygithub/Deep-Learning-Playground/_examples/mnist/output
+  - mode: valid
+    class_name: DefaultHistory
+    args: *history_args
+
+
+metrics_pipeline:
+  class_name: ClassificationMetricsPipeline
+  args:
+    num_classes: 10
+    single_label: True
+    func_dicts:
+      - log_name: *pr_curves
+        func_name: get_pr_curves
+        func_args: {}
+
+      - log_name: *refine_pr_curves
+        func_name: get_refine_pr_curves
+        func_args:
+          pr_curves_key: *pr_curves
+
+      - log_name: *ap_list
+        func_name: get_ap_list
+        func_args:
+          refine_pr_curves_key: *refine_pr_curves
+
+      - log_name: *map
+        func_name: get_map
+        func_args:
+          ap_list_key: *ap_list
+      
+      - log_name: *wmap
+        func_name: get_wmap
+        func_args:
+          ap_list_key: *ap_list
+
+      - log_name: *best_threshold
+        func_name: get_best_threshold
+        func_args:
+          strategy: f1
+          pr_curves_key: *pr_curves
+
+      - log_name: *confusion
+        func_name: get_confusion
+        func_args:
+          threshold_key: *best_threshold
+
+      - log_name: *confusion_with_img_indices
+        func_name: get_confusion_with_img_indices
+        func_args:
+          threshold_key: *best_threshold
+      
+      - log_name: *confusion_col_norm
+        func_name: get_confusion_axis_norm
+        func_args:
+          confusion_key: *confusion
+          axis: 0
+      
+      - log_name: *confusion_row_norm
+        func_name: get_confusion_axis_norm
+        func_args:
+          confusion_key: *confusion
+          axis: 1
+
+
+monitors:
+  - mode: valid
+    log_name: *map
+    target: max
+
+
+hyperparameters:
+  device: auto
+  epochs: 2
+  save_dir: *save_dir
+  save_ckpts_per_epochs: 30
+  train_func_name: train
+  valid_func_name: valid
+  infer_func_name: infer
