@@ -47,4 +47,4 @@ python main.py --mode infer --cfg _examples/mnist/cfg.yaml
 
 # Design
 + modularization, reusability, extensibility, flexibility, Readability
-+ see [main.py](./main.py) and [configs](./_exmaples/boston_housing/cfg.yaml) to view the workflow of this framework
++ see [main.py](./main.py) and [configs](./_examples/boston_housing/cfg.yaml) to view the workflow of this framework
